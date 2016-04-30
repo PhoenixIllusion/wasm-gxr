@@ -1,0 +1,5 @@
+makeheaders
+out.html
+./out.asm.js
+out.js
+.DS_Store
