@@ -1,4 +1,7 @@
 CC=emcc
+ASM_TO_WAST=../binaryen/bin/asm2wasm
+WAST_TO_WASM=../binaryen/bin/wasm-as
+#WAST_TO_WASM=../sexpr-wasm-prototype/build/sexpr-wasm
 SOURCES:=$(wildcard *.c)
 OUTPUT=js/out.asm.js
 OUT_TARGET=out.html
@@ -10,6 +13,9 @@ all: $(SOURCES) $(OUTPUT)
 $(OUTPUT): $(SOURCES)
 	$(CC) $(SOURCES) $(LDFLAGS) -o $(OUT_TARGET)
 	cp out.asm.js $(OUTPUT)
+	$(ASM_TO_WAST) -o out.asm.wast out.asm.js
+	$(WAST_TO_WASM) -o js/out.wasm out.asm.wast
 	rm $(OUT_AUX)
+	#rm out.asm.wast
 clean:
 	rm $(OUTPUT) $(OUT_AUX)

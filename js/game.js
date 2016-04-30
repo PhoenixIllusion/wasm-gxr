@@ -1,13 +1,6 @@
 var heap = new ArrayBuffer(0x10000);
 var heapF32 = new Float32Array(heap); 
-var gxr = Module["asm"](window, {_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}, heap);
-
-var camera = gxr._mem_alloc(16,4);
-
-var mvMatrix = gxr._mem_alloc(16,4);
-var mvMatrix_array = heapF32.subarray(mvMatrix/4, (mvMatrix/4)+16);
-var pMatrix = gxr._mem_alloc(16,4);
-var pMatrix_array = heapF32.subarray(pMatrix/4, (pMatrix/4)+16);
+var gxr;
 
 function heapObj(count,size) {
   var offset = gxr._mem_alloc(count,size);
@@ -15,11 +8,18 @@ function heapObj(count,size) {
   return {offset:offset, array: subset};
 }
 
-var cameraParts = { eye: heapObj(3,4),center:heapObj(3,4),up:heapObj(3,4)};
+function initGlobals() {
+  window.camera = gxr._mem_alloc(16,4);
+  window.mvMatrix = gxr._mem_alloc(16,4);
+  window.mvMatrix_array = heapF32.subarray(mvMatrix/4, (mvMatrix/4)+16);
+  window.pMatrix = gxr._mem_alloc(16,4);
+  window.pMatrix_array = heapF32.subarray(pMatrix/4, (pMatrix/4)+16);
 
-  cameraParts.up.array[0] = 0;
-  cameraParts.up.array[1] = 0;
-  cameraParts.up.array[2] = 1;
+  window.cameraParts = { eye: heapObj(3,4),center:heapObj(3,4),up:heapObj(3,4)};
+  window.cameraParts.up.array[0] = 0;
+  window.cameraParts.up.array[1] = 0;
+  window.cameraParts.up.array[2] = 1;
+}
 
 function drawMap() {
 	gxr._mat4_identity(mvMatrix);
@@ -117,6 +117,7 @@ function gameDraw(t) {
 }
 
 function setupGame() {
+  initGlobals();
 	document.onkeydown = gameKeyDown;
 	document.onkeyup = gameKeyUp;
 	canvas = document.getElementById("canvas");
@@ -126,4 +127,14 @@ function setupGame() {
 	requestAnimationFrame(gameDraw);
 }
 
-setupGame();
+if(!window.Wasm || !window.Wasm.instantiateModule) {
+  gxr = Module["asm"](window, {_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}, heap);
+  setupGame();
+} else {
+  fetch("js/out.wasm").then(function(response) {
+    return response.arrayBuffer();
+  }).then(function(buffer) {
+    gxr = Wasm.instantiateModule(new Uint8Array(buffer), {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
+    setupGame(); 
+  });
+}
