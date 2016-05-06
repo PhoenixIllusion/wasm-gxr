@@ -1,16 +1,5 @@
 var Reader = window.Reader || {};
 
-Reader.gunzip = function (buffer) {
-  return new Promise(function(resolve,reject) {
-      try {      
-        var gunzip = new Zlib.Gunzip(buffer);
-        resolve(gunzip.decompress());
-      }catch(e){
-        reject(e);
-      }
-  });
-}
-
 Reader.lzma = function (buffer) {
   return new Promise(function(resolve,reject) {
       try {      
@@ -24,14 +13,6 @@ Reader.lzma = function (buffer) {
 Reader.getText = function(address, data) {
     return fetch(address + data).then(function(response) {
       return response.text();
-    });
-}
-
-Reader.getGZIP = function(address, data) {
-    return fetch(address + data).then(function(response) {
-      return response.arrayBuffer();
-    }).then(function(buffer) {
-      return Reader.gunzip(new Uint8Array(buffer));
     });
 }
 
@@ -51,9 +32,7 @@ Reader.getBinary = function(address, data) {
 
 Reader.getWASM = function(address, data) {
     address += data;
-    if(address.endsWith(".gz")) {
-      return Reader.getGZIP(address, "");
-    } else if(address.endsWith(".lz")) {
+    if(address.endsWith(".lz")) {
       return Reader.getLZMA(address, "");
     } else {
       return Reader.getBinary(address, "");
