@@ -123,18 +123,31 @@ function setupGame() {
 	canvas = document.getElementById("canvas");
 	initGL(canvas);
 	initShaders();
-	initModels();
-	requestAnimationFrame(gameDraw);
+	initModels().then(function() {
+	  requestAnimationFrame(gameDraw);
+  });
 }
 
 if(!window.Wasm || !window.Wasm.instantiateModule) {
+  alert("WASM Not Supported");
   gxr = Module["asm"](window, {_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}, heap);
+  alert("ASMJS Loaded");
   setupGame();
 } else {
-  fetch("js/out.wasm").then(function(response) {
-    return response.arrayBuffer();
-  }).then(function(buffer) {
-    gxr = Wasm.instantiateModule(new Uint8Array(buffer), {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
-    setupGame(); 
-  });
+    Reader.getWASM("js/out.opt.wasm", "").then(function(buffer) {
+      gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
+        {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
+      alert("Optimized WASM Loaded");
+      setupGame(); 
+    }).catch(function(err) {
+      alert("Optimized WASM Failed: "+err);
+      Reader.getWASM("js/out.wasm.lz", "").then(function(buffer) {
+        gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
+          {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
+          alert("Non-Optimized WASM Loaded");
+        setupGame(); 
+      }).catch(function(err) {
+        alert("Non-Optimized WASM Failed: "+err);
+      });
+    });
 }

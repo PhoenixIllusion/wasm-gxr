@@ -35,48 +35,6 @@ var vertext_shader_src = "precision mediump float;"
 		+ "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);"
 		+ "  vTextureCoord = aTextureCoord;" + "}";
 
-var Reader = {};
-
-Reader.getAJAX = function(address, data) {
-	var result = null;
-	if (data != null)
-		address += data;
-	$.ajax({
-		async : false,
-		url : address,
-		dataType : "text",
-		success : function(data, textStatus) {
-			result = data;
-		}
-	});
-	return result;
-}
-
-Reader.getJSON = function(address, data) {
-	var ret;
-	var ajaxParam = {
-		'url' : address + data,
-		'type' : 'GET',
-		'dataType' : 'json',
-		'async' : false
-	};
-	ajaxParam.success = function(data) {
-		ret = data;
-	};
-	$.ajax(ajaxParam);
-
-	return ret;
-}
-Reader.getImage = function(address, data, callback) {
-	var ret = new Image();
-	ret.src = address + data;
-	// alert(address+data);
-	ret.onload = function() {
-		callback(ret)
-	};
-	return ret;
-}
-
 function GL_Texture(linear) {
 	this.TEXTURE_ID = gl.createTexture();
 	this.src = "";
@@ -248,30 +206,30 @@ function initModels() {
 	world.pos = initBuf(world.vertex, 2);
 	world.uv = initBuf(world.texture, 1);
 	world.num_vertex = 6;
-	
 	world.tex = new GL_Texture(false);
-	var img = new Image();
-	img.src = "data/map.jpg";
-	img.onload = function() {
-		world.tex.load(this);
-	};
-	
-	ship = loadModel("data/ship.obj", "data/ship_tex.png", 0.02);
-	sky = loadModel("data/skybox.obj", "data/Morning.jpg", 1.75);
+  return Reader.getImage("data/map.jpg","").then(function(img) {
+    world.tex.load(img);
+    return loadModel("data/ship.obj", "data/ship_tex.png", 0.02);
+  }).then(function(model) {
+	  ship = model;
+    return loadModel("data/skybox.obj", "data/Morning.jpg", 1.75);
+  }).then(function(model) {
+	  sky = model;
+  });
 }
 
 
 function loadModel(obj, img_src, scale) {
 	var response = {};
-	response.model = new ObjFile(Reader.getAJAX(obj, null));
-	response.pos = initBuf([ response.model.vertex ], scale);
-	response.num_vertex = response.model.vertex.length / 3;
-	response.uv = initBuf([ response.model.texture ], 1);
-	response.tex = new GL_Texture(false);
-	var tex = new Image();
-	tex.src = img_src;
-	tex.onload = function() {
-		response.tex.load(this);
-	};
-	return response;
+  return Reader.getText(obj, "").then(function(text) {
+	  response.model = new ObjFile(text);
+	  response.pos = initBuf([ response.model.vertex ], scale);
+	  response.num_vertex = response.model.vertex.length / 3;
+	  response.uv = initBuf([ response.model.texture ], 1);
+	  response.tex = new GL_Texture(false);
+    return Reader.getImage(img_src, "");
+  }).then(function(img) {
+		response.tex.load(img);
+    return response;
+  });
 }
