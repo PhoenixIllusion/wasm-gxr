@@ -131,17 +131,17 @@ if(!window.Wasm || !window.Wasm.instantiateModule) {
     Reader.getWASM("js/out.opt.wasm", "").then(function(buffer) {
       gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
         {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
-      alert("Optimized WASM Loaded");
+      console.log("Optimized WASM Loaded");
       setupGame(); 
     }).catch(function(err) {
-      alert("Optimized WASM Failed: "+err);
+      console.log("Optimized WASM Failed: "+err);
       Reader.getWASM("js/out.wasm.lz", "").then(function(buffer) {
         gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
           {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
-          alert("Non-Optimized WASM Loaded");
+          console.log("Non-Optimized WASM Loaded");
         setupGame(); 
       }).catch(function(err) {
-        alert("Non-Optimized WASM Failed: "+err);
+        console.log("Non-Optimized WASM Failed: "+err);
       });
     });
 }
