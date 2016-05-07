@@ -177,29 +177,22 @@ function updateLogic(deltaT) {
 	return updatedRot || updatedPos;
 }
 
-var world = {
-	vertex : [].concat.apply([], [ [ 1, 1, 0 ], [ 1, -1, 0 ], [ -1, 1, 0 ], [ -1, 1, 0 ],
-			[ 1, -1, 0 ], [ -1, -1, 0 ] ]),
-	texture : [].concat.apply([], [ [ 1, 1 ], [ 1, 0 ], [ 0, 1 ], [ 0, 1 ], [ 1, 0 ], [ 0, 0 ] ])
-};
+var world = {};
 var ship = {};
 
 var sky = {};
 
-function initBuf(pos, tex, scale) {
+function initBuf(array_buffer, scale) {
 	var obj = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, obj);
 
-	var array_buffer = new Float32Array(pos.length * 3 + tex.length*2);
 	var index = 0;
-	for ( var i = 0; i < pos.length/3; i++) {
+	for ( var i = 0; i < array_buffer.length/5; i++) {
 
 		for ( var j = 0; j < 3; j++) {
-			array_buffer[index++] = pos[i*3+j] * scale;
+			array_buffer[index++] *= scale;
 		}
-    for ( var j = 0; j < 2; j++) {
-			array_buffer[index++] = tex[i*2+j];
-		}
+    index+=2;
 	}
 
 	gl.bufferData(gl.ARRAY_BUFFER, array_buffer, gl.STATIC_DRAW);
@@ -207,27 +200,25 @@ function initBuf(pos, tex, scale) {
 }
 
 function initModels() {
-	world.buf = initBuf(world.vertex, world.texture, 2);
-	world.num_vertex = 6;
-	world.tex = new GL_Texture(false);
-  return Reader.getImage("data/map.jpg","").then(function(img) {
-    world.tex.load(img);
-    return loadModel("data/ship.obj", "data/ship_tex.png", 0.02);
-  }).then(function(model) {
-	  ship = model;
-    return loadModel("data/skybox.obj", "data/Morning.jpg", 1.75);
-  }).then(function(model) {
-	  sky = model;
-  });
+  return loadModel("data/map.bin.lzma", "data/map.jpg", 1).
+    then(function(model) {
+      world = model;
+      return loadModel("data/ship.bin.lzma", "data/ship_tex.png", 1);
+    }).then(function(model) {
+	    ship = model;
+      return loadModel("data/skybox.bin.lzma", "data/Morning.jpg", 1);
+    }).then(function(model) {
+	    sky = model;
+    });
 }
 
 
 function loadModel(obj, img_src, scale) {
 	var response = {};
-  return Reader.getText(obj, "").then(function(text) {
-	  response.model = new ObjFile(text);
-	  response.buf = initBuf( response.model.vertex, response.model.texture , scale);
-	  response.num_vertex = response.model.vertex.length / 3;
+  return Reader.getLZMA(obj, "").then(function(binary) {
+    binary = new Float32Array(binary.buffer);
+	  response.buf = initBuf( binary , scale);
+	  response.num_vertex = binary.length / 6;
 	  response.tex = new GL_Texture(false);
     return Reader.getImage(img_src, "");
   }).then(function(img) {
