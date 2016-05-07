@@ -178,23 +178,27 @@ function updateLogic(deltaT) {
 }
 
 var world = {
-	vertex : [ [ 1, 1, 0 ], [ 1, -1, 0 ], [ -1, 1, 0 ], [ -1, 1, 0 ],
-			[ 1, -1, 0 ], [ -1, -1, 0 ] ],
-	texture : [ [ 1, 1 ], [ 1, 0 ], [ 0, 1 ], [ 0, 1 ], [ 1, 0 ], [ 0, 0 ] ]
+	vertex : [].concat.apply([], [ [ 1, 1, 0 ], [ 1, -1, 0 ], [ -1, 1, 0 ], [ -1, 1, 0 ],
+			[ 1, -1, 0 ], [ -1, -1, 0 ] ]),
+	texture : [].concat.apply([], [ [ 1, 1 ], [ 1, 0 ], [ 0, 1 ], [ 0, 1 ], [ 1, 0 ], [ 0, 0 ] ])
 };
 var ship = {};
 
 var sky = {};
 
-function initBuf(buffer, scale) {
+function initBuf(pos, tex, scale) {
 	var obj = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, obj);
 
-	var array_buffer = new Float32Array(buffer.length * buffer[0].length);
+	var array_buffer = new Float32Array(pos.length * 3 + tex.length*2);
 	var index = 0;
-	for ( var i = 0; i < buffer.length; i++) {
-		for ( var j = 0; j < buffer[i].length; j++) {
-			array_buffer[index++] = buffer[i][j] * scale;
+	for ( var i = 0; i < pos.length/3; i++) {
+
+		for ( var j = 0; j < 3; j++) {
+			array_buffer[index++] = pos[i*3+j] * scale;
+		}
+    for ( var j = 0; j < 2; j++) {
+			array_buffer[index++] = tex[i*2+j];
 		}
 	}
 
@@ -203,8 +207,7 @@ function initBuf(buffer, scale) {
 }
 
 function initModels() {
-	world.pos = initBuf(world.vertex, 2);
-	world.uv = initBuf(world.texture, 1);
+	world.buf = initBuf(world.vertex, world.texture, 2);
 	world.num_vertex = 6;
 	world.tex = new GL_Texture(false);
   return Reader.getImage("data/map.jpg","").then(function(img) {
@@ -223,9 +226,8 @@ function loadModel(obj, img_src, scale) {
 	var response = {};
   return Reader.getText(obj, "").then(function(text) {
 	  response.model = new ObjFile(text);
-	  response.pos = initBuf([ response.model.vertex ], scale);
+	  response.buf = initBuf( response.model.vertex, response.model.texture , scale);
 	  response.num_vertex = response.model.vertex.length / 3;
-	  response.uv = initBuf([ response.model.texture ], 1);
 	  response.tex = new GL_Texture(false);
     return Reader.getImage(img_src, "");
   }).then(function(img) {

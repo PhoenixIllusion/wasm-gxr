@@ -27,13 +27,11 @@ function drawMap() {
 
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, world.pos);
+	gl.bindBuffer(gl.ARRAY_BUFFER, world.buf);
 	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 0, 0);
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, world.uv);
+			false, 20, 0);
 	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 0, 0);
+			false, 20, 12);
 
 	world.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
 	gl.drawArrays(gl.TRIANGLES, 0, world.num_vertex);
@@ -45,13 +43,11 @@ function drawMap() {
 
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, sky.pos);
+	gl.bindBuffer(gl.ARRAY_BUFFER, sky.buf);
 	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 0, 0);
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, sky.uv);
+			false, 20, 0);
 	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 0, 0);
+			false, 20, 12);
 
 	sky.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
 	gl.drawArrays(gl.TRIANGLES, 0, sky.num_vertex);
@@ -66,13 +62,11 @@ function drawObj(dat) {
 	world.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, ship.pos);
+	gl.bindBuffer(gl.ARRAY_BUFFER, ship.buf);
 	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 0, 0);
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, ship.uv);
+			false, 20, 0);
 	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 0, 0);
+			false, 20, 12);
 	ship.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
 	gl.drawArrays(gl.TRIANGLES, 0, ship.num_vertex);
 }
