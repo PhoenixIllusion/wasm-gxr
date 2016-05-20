@@ -2,6 +2,7 @@
 var context, canvas, gl;
 var previousT = -1;
 var keyboardBuffer = [];
+var gyro = null;
 
 var p1XY = new Float32Array([ 0, 0.75, 180 ]);
 var p2XY = new Float32Array([ 0, 0.75, 180 ]);
@@ -68,6 +69,10 @@ function initGL(canvas) {
 		gl.viewportHeight = canvas.height;
 	} catch (e) {
 	}
+
+  window.onkeydown = gameKeyDown;
+  window.onkeyup = gameKeyUp;
+  window.addEventListener('deviceorientation', devOrientHandler, false);
 	if (!gl) {
 		alert("Could not initialise WebGL, sorry :-(");
 	}
@@ -119,6 +124,11 @@ function gameKeyUp(e) {
 	keyboardBuffer[e.keyCode] = false;
 }
 
+function devOrientHandler(e) {
+	if(event.alpha != null)
+	gyro = [event.gamma,  event.beta, event.alpha ];
+}
+
 function updateLogic(deltaT) {
 	var updatedPos = false;
 	var updatedRot = false;
@@ -127,7 +137,60 @@ function updateLogic(deltaT) {
 	for ( var v in window.gamepads) {
 		gamePad = window.gamepads[v];
 	}
-	if (!gamePad) {
+  if(gyro) {
+    if(gyro[1] < 30) {
+      if(gyro[1]<-15) {
+        keyboardBuffer[KEY_A] = 1;
+      } else {
+        keyboardBuffer[KEY_A] = 0;
+      }
+
+      if(gyro[1]>15) {
+        keyboardBuffer[KEY_D] = 1;
+      } else {
+        keyboardBuffer[KEY_D] = 0;
+      }
+     
+      if(gyro[1]>-40) {
+        keyboardBuffer[KEY_W] = 1;
+      } else {
+        keyboardBuffer[KEY_W] = 0;
+      }
+
+      if(gyro[1]<-50) {
+        keyboardBuffer[KEY_S] = 1;
+      } else {
+        keyboardBuffer[KEY_S] = 0;
+      }
+    } else {
+      if(gyro[0]<-20) {
+        keyboardBuffer[KEY_A] = 1;
+      } else {
+        keyboardBuffer[KEY_A] = 0;
+      }
+
+      if(gyro[0]>20) {
+        keyboardBuffer[KEY_D] = 1;
+      } else {
+        keyboardBuffer[KEY_D] = 0;
+      }
+     
+      if(gyro[1]<45) {
+        keyboardBuffer[KEY_W] = 1;
+      } else {
+        keyboardBuffer[KEY_W] = 0;
+      }
+
+      if(gyro[1]>50) {
+        keyboardBuffer[KEY_S] = 1;
+      } else {
+        keyboardBuffer[KEY_S] = 0;
+      }
+    }
+ 
+  }
+
+  if (!gamePad) {
 		if (keyboardBuffer[KEY_A]) {
 			p1XY[2] += 2;
 			updatedRot = true;

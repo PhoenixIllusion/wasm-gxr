@@ -112,9 +112,9 @@ function gameDraw(t) {
 
 function setupGame() {
   initGlobals();
-	document.onkeydown = gameKeyDown;
-	document.onkeyup = gameKeyUp;
 	canvas = document.getElementById("canvas");
+  canvas.width=document.body.clientWidth/4;
+  canvas.height=document.body.clientHeight/4;
 	initGL(canvas);
 	initShaders();
 	initModels().then(function() {
@@ -123,9 +123,9 @@ function setupGame() {
 }
 
 if(!window.Wasm || !window.Wasm.instantiateModule) {
-  alert("WASM Not Supported");
+  console.log("WASM Not Supported");
   gxr = Module["asm"](window, {_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}, heap);
-  alert("ASMJS Loaded");
+  console.log("ASMJS Loaded");
   setupGame();
 } else {
     Reader.getWASM("js/out.opt.wasm", "").then(function(buffer) {
