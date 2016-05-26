@@ -15,6 +15,8 @@ function initGlobals() {
   window.pMatrix = gxr._mem_alloc(16,4);
   window.pMatrix_array = heapF32.subarray(pMatrix/4, (pMatrix/4)+16);
 
+  window.scaler = heapObj(3,4);
+
   window.cameraParts = { eye: heapObj(3,4),center:heapObj(3,4),up:heapObj(3,4)};
   window.cameraParts.up.array[0] = 0;
   window.cameraParts.up.array[1] = 0;
@@ -23,52 +25,40 @@ function initGlobals() {
 
 function drawMap() {
 	gxr._mat4_identity(mvMatrix);
+  scaler.array[0] = scaler.array[1] = scaler.array[2] = 2;
+	gxr._mat4_scale(mvMatrix, mvMatrix,  scaler.offset );
 	gxr._mat4_multiply(mvMatrix, camera, mvMatrix);
 
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, world.buf);
-	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 20, 0);
-	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 20, 12);
-
-	world.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
-	gl.drawArrays(gl.TRIANGLES, 0, world.num_vertex);
+	gl.bindTexture(gl.TEXTURE_2D, world.tex);
+	gl.drawArrays(gl.TRIANGLES, world.offset, world.size);
 
 	gxr._mat4_identity(mvMatrix);
+  scaler.array[0] = scaler.array[1] = scaler.array[2] = 1.75;
+	gxr._mat4_scale(mvMatrix, mvMatrix,  scaler.offset );
 	gxr._mat4_rotateX(mvMatrix, mvMatrix, 90 / 180 * Math.PI);
 	gxr._mat4_translate_xyz(mvMatrix, mvMatrix,  0, 0, -.125 );
 	gxr._mat4_multiply(mvMatrix, camera, mvMatrix);
 
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, sky.buf);
-	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 20, 0);
-	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 20, 12);
-
-	sky.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
-	gl.drawArrays(gl.TRIANGLES, 0, sky.num_vertex);
+	gl.bindTexture(gl.TEXTURE_2D, sky.tex);
+	gl.drawArrays(gl.TRIANGLES, sky.offset, sky.size);
 }
 
 function drawObj(dat) {
 	gxr._mat4_identity(mvMatrix);
+  scaler.array[0] = scaler.array[1] = scaler.array[2] = .02;
 	gxr._mat4_translate_xyz(mvMatrix, mvMatrix,  dat[0], dat[1], 0.00 );
+	gxr._mat4_scale(mvMatrix, mvMatrix,  scaler.offset );
 	gxr._mat4_rotate(mvMatrix, mvMatrix, (dat[2] - 90) / 180 * Math.PI, cameraParts.up.offset);
 	gxr._mat4_multiply(mvMatrix, camera, mvMatrix);
 
-	world.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
 	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix_array);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, ship.buf);
-	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
-			false, 20, 0);
-	gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
-			false, 20, 12);
-	ship.tex.bind(shaderProgram.textureSampler, gl.TEXTURE0, 0);
-	gl.drawArrays(gl.TRIANGLES, 0, ship.num_vertex);
+	gl.bindTexture(gl.TEXTURE_2D, ship.tex);
+	gl.drawArrays(gl.TRIANGLES, ship.offset, ship.size);
 }
 
 "use strict";
@@ -128,14 +118,14 @@ if(!window.Wasm || !window.Wasm.instantiateModule) {
   console.log("ASMJS Loaded");
   setupGame();
 } else {
-    Reader.getWASM("js/out.opt.wasm", "").then(function(buffer) {
+    fetch("js/out.opt.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
       gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
         {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
       console.log("Optimized WASM Loaded");
       setupGame(); 
     }).catch(function(err) {
       console.log("Optimized WASM Failed: "+err);
-      Reader.getWASM("js/out.wasm.lz", "").then(function(buffer) {
+      fetch("js/out.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
         gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
           {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
           console.log("Non-Optimized WASM Loaded");

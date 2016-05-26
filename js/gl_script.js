@@ -36,31 +36,6 @@ var vertext_shader_src = "precision mediump float;"
 		+ "  gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);"
 		+ "  vTextureCoord = aTextureCoord;" + "}";
 
-function GL_Texture(linear) {
-	this.TEXTURE_ID = gl.createTexture();
-	this.src = "";
-	this.bind = function(uSamplerIDX, channel, channel_index) {
-		gl.activeTexture(channel);
-		gl.bindTexture(gl.TEXTURE_2D, this.TEXTURE_ID);
-		gl.uniform1i(uSamplerIDX, channel_index);
-	}
-	var TEXID = this.TEXTURE_ID;
-	this.load = function(IMG) {
-		this.src = IMG.src;
-		gl.bindTexture(gl.TEXTURE_2D, TEXID);
-		gl
-				.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
-						gl.UNSIGNED_BYTE, IMG);
-		// gl.generateMipmap(gl.TEXTURE_2D);
-		if (linear == null)
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-		else
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-		gl.bindTexture(gl.TEXTURE_2D, null);
-	};
-}
-
 function initGL(canvas) {
 	try {
 		gl = canvas.getContext("experimental-webgl");
@@ -240,52 +215,89 @@ function updateLogic(deltaT) {
 	return updatedRot || updatedPos;
 }
 
+var vbo;
 var world = {};
 var ship = {};
-
 var sky = {};
 
-function initBuf(array_buffer, scale) {
-	var obj = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, obj);
+function hasExtension(name) {
+  var allExts = gl.getSupportedExtensions();
+  var selected = [];
+  allExts.forEach(function(o,i){if(o.indexOf(name)>=0){
+    selected.push(o);
+  }});
+  return gl.getExtension(selected[0])
+}
 
-	var index = 0;
-	for ( var i = 0; i < array_buffer.length/5; i++) {
+function parsePak(buffer){
+  var resp = {};
+  var U8 = new Uint8Array(buffer);
+  var I32 = new Int32Array(buffer);
+  var index=0;
+  var count = I32[index++];
+  resp.entries = [];
+  resp.U8 = U8;
+  resp.I32 = I32;
+  for(var i=0;i<count;i++) {
+    var entry = {};
+    entry.type = I32[index++];
+    entry.width = I32[index++];
+    entry.height = I32[index++];
+    entry.offset = I32[index++];
+    entry.size = I32[index++];
+    entry.data = new Uint8Array(buffer, entry.offset, entry.size);
+    resp.entries.push(entry);
+  }
+  resp.F32 = new Float32Array(buffer, resp.entries[0].offset);
+  return resp;
+}
+function getSupportedTexture() {
+  if(hasExtension('compressed_texture_s3tc'))
+    return "dxt1";
+  if(hasExtension('compressed_texture_pvrtc'))
+    return "pvrtc";
+  if(hasExtension('compressed_texture_etc1'))
+    return "etc1";
+  return "raw";
+}
 
-		for ( var j = 0; j < 3; j++) {
-			array_buffer[index++] *= scale;
-		}
-    index+=2;
-	}
+function parseTexture(entry) {
+	var texId = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texId);
 
-	gl.bufferData(gl.ARRAY_BUFFER, array_buffer, gl.STATIC_DRAW);
-	return obj;
+  if(entry.type == 0){
+	  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, entry.width, entry.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, entry.data);
+  } else {
+		gl.compressedTexImage2D(gl.TEXTURE_2D, 0, entry.type, entry.width, entry.height, 0, entry.data);
+  }
+
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  return texId;
 }
 
 function initModels() {
-  return loadModel("data/map.bin.lzma", "data/map.jpg", 1).
-    then(function(model) {
-      world = model;
-      return loadModel("data/ship.bin.lzma", "data/ship_tex.png", 1);
-    }).then(function(model) {
-	    ship = model;
-      return loadModel("data/skybox.bin.lzma", "data/Morning.jpg", 1);
-    }).then(function(model) {
-	    sky = model;
+  return Promise.all(["data/model.pak","data/"+getSupportedTexture()+".tex_pak"].
+    map(function(url){
+      return fetch(url).then(function(resp){
+        return resp.arrayBuffer();
+      }).then(function(arraybuffer){
+        return parsePak(arraybuffer);
+      });
+    })).then(function(paks) {
+        vbo = gl.createBuffer();
+	      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+	      gl.bufferData(gl.ARRAY_BUFFER, paks[0].F32, gl.STATIC_DRAW);
+	      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT,
+			      false, 32, 0);
+	      gl.vertexAttribPointer(shaderProgram.vertexTextureAttribute, 2, gl.FLOAT,
+			      false, 32, 12);
+        var texmap = [2,0,1];
+        [world, ship, sky].map(function(o,i) {
+            o.tex = parseTexture(paks[1].entries[texmap[i]])
+            o.offset = (paks[0].entries[i].offset-paks[0].entries[0].offset)/32;
+            o.size = paks[0].entries[i].size/32;
+        });
+        return [world, ship, sky];
     });
-}
-
-
-function loadModel(obj, img_src, scale) {
-	var response = {};
-  return Reader.getLZMA(obj, "").then(function(binary) {
-    binary = new Float32Array(binary.buffer);
-	  response.buf = initBuf( binary , scale);
-	  response.num_vertex = binary.length / 6;
-	  response.tex = new GL_Texture(false);
-    return Reader.getImage(img_src, "");
-  }).then(function(img) {
-		response.tex.load(img);
-    return response;
-  });
 }
