@@ -118,20 +118,12 @@ if(!window.Wasm || !window.Wasm.instantiateModule) {
   console.log("ASMJS Loaded");
   setupGame();
 } else {
-    fetch("js/out.opt.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
-      gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
-        {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
-      console.log("Optimized WASM Loaded");
-      setupGame(); 
-    }).catch(function(err) {
-      console.log("Optimized WASM Failed: "+err);
-      fetch("js/out.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
-        gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
-          {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
-          console.log("Non-Optimized WASM Loaded");
-        setupGame(); 
-      }).catch(function(err) {
-        console.log("Non-Optimized WASM Failed: "+err);
-      });
-    });
+  fetch("js/out.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
+    gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
+      {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
+    console.log("WASM Loaded");
+    setupGame(); 
+  }.catch(function(err) {
+    console.log("WASM Failed: "+err);
+  });
 }

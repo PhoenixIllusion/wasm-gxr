@@ -15,8 +15,6 @@ $(OUTPUT): $(SOURCES)
 	cp out.asm.js $(OUTPUT)
 	$(ASM_TO_WAST) -o out.asm.wast out.asm.js
 	$(WAST_TO_WASM) -o js/out.wasm out.asm.wast
-	$(WAST_TO_WASM) -O -o js/out.opt.wasm out.asm.wast
 	rm $(OUT_AUX)
-	#rm out.asm.wast
 clean:
 	rm -f $(OUTPUT) $(OUT_AUX)
