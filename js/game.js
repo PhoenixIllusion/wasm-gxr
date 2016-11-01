@@ -99,7 +99,12 @@ function gameDraw(t) {
 
 	requestAnimationFrame(gameDraw);
 }
-
+function instantiateWasm(url, imports) {
+  return fetch("js/out.wasm")
+  .then(function(resp){ return resp.arrayBuffer();})
+  .then(function(bytes) { return WebAssembly.compile(bytes);})
+  .then(function(m){ return new WebAssembly.Instance(m, imports);});
+}
 function setupGame() {
   initGlobals();
 	canvas = document.getElementById("canvas");
@@ -112,18 +117,34 @@ function setupGame() {
   });
 }
 
-if(!window.Wasm || !window.Wasm.instantiateModule) {
+if(!window.WebAssembly || !window.WebAssembly.compile) {
   console.log("WASM Not Supported");
   gxr = Module["asm"](window, {_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}, heap);
   console.log("ASMJS Loaded");
   setupGame();
 } else {
-  fetch("js/out.wasm").then(function(resp){return resp.arrayBuffer();}).then(function(buffer) {
-    gxr = Wasm.instantiateModule(new Uint8Array(buffer), 
-      {"global.Math": Math, env:{_roundf:Math.round,_fminf:Math.min,_fmaxf:Math.max}}, heap).exports;  
+  var TABLE_SIZE = 0;
+  var importObj = {
+      "global.Math": Math,
+      "asm2wasm": {
+        "i32u-rem": function(x, y) {
+                      return ((x >>> 0) % (y >>> 0)) >>> 0;
+                    }
+      },
+      env:{
+        memory: new WebAssembly.Memory({initial:10, maximum:100}), memoryBase: 0,
+        table: new WebAssembly.Table({ initial: TABLE_SIZE, maximum: TABLE_SIZE, element: 'anyfunc' }), tableBase: 0,
+        _roundf:Math.round,
+        _fminf:Math.min,
+        _fmaxf:Math.max}
+  };
+  instantiateWasm("js/out.wasm",importObj).then(function(instance) {
+    gxr = instance.exports;
+    heap = importObj.env.memory.buffer;
+    heapF32 = new Float32Array(heap);
     console.log("WASM Loaded");
     setupGame(); 
-  }.catch(function(err) {
+  }).catch(function(err) {
     console.log("WASM Failed: "+err);
   });
 }
